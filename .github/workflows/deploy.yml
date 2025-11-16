@@ -1,4 +1,4 @@
-name: CD Pipeline - Deploy to Railway
+name: CD Pipeline - Build Verification
 
 on:
   push:
@@ -6,12 +6,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build-verify:
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
     
     - name: Set up Python 3.10
       uses: actions/setup-python@v4
@@ -35,15 +38,13 @@ jobs:
         path: model/
       continue-on-error: true
     
-    - name: Install Railway CLI
+    - name: Build Docker image
       run: |
-        curl -fsSL https://railway.app/install.sh | sh
-        echo "$HOME/.railway/bin" >> $GITHUB_PATH
+        docker build -t ml-api:test .
     
-    - name: Deploy to Railway
-      env:
-        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    - name: Verify Docker image
       run: |
-        railway login --token $RAILWAY_TOKEN
-        railway up --service ${{ secrets.RAILWAY_SERVICE_ID }} --detach
+        docker images ml-api:test
+        echo "✅ Docker image built successfully"
+        echo "ℹ️  Railway will auto-deploy when connected via web interface"
 
